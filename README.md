@@ -95,10 +95,11 @@ account, a tracker, or a network connection.
 
 ## Current status
 
-Planning scaffold. No application code exists yet; the milestone list and backlog
-live in PLAN.md and the issue tracker.
+Flutter skeleton in place (windows/android/ios, empty adaptive shell, CI). No
+features yet; the milestone list and backlog live in PLAN.md and the issue
+tracker.
 
-1. **M0 Scaffold:** Flutter project (windows/android/ios), CI, toolchain pins.
+1. **M0 Scaffold (done):** Flutter project (windows/android/ios), CI, toolchain pins.
 2. **M1 Domain:** local database, repository/stock/history entities + tests.
 3. **M2 Recipes:** library CRUD, search, photos.
 4. **M3 Planner:** week grid, slots, servings, copy-week.
