@@ -1,0 +1,13 @@
+Meal Queue is an offline weekly meal planner and shopping-list generator for home cooks who keep their own recipes and want the week's shopping done from what they actually own.
+
+Keep your recipes, map out dinners and lunches for the week, and turn that plan into a single, merged shopping list scaled to the servings you actually eat. No accounts, no subscriptions, no cloud syncing, and no imported junk recipes you never asked for.
+
+FEATURES
+
+- Recipe library: store ingredients with quantities, prep steps, tags, photos, and base servings locally on your device.
+- Week planner: lay out days with breakfast, lunch, dinner, or snack slots; adjust servings per meal; mark leftovers or eating out.
+- Smart merged shopping list: combines like ingredients across recipes, handles unit math safely, and lets you add custom items and group them by aisle.
+- Use-first pantry & freezer nudges: log loose pantry and freezer stock so you can use what you already have before buying more.
+- Cook history: remember what was cooked when and how often, helping you rotate meals without thinking about it.
+- Responsive design: platform-authentic experience on your phone at the store, your tablet in the kitchen, or your Windows PC at your desk.
+- Privacy-first: all data stays local in SQLite storage on your device. Complete JSON backup and restore whenever you want. No ads, no tracking, and no network requests.

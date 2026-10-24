@@ -1,0 +1,18 @@
+{
+  "schema": "tool-lab/toolchain/v1",
+  "project": "meal-queue",
+  "framework": "flutter",
+  "flutter_stable": "3.47.7",
+  "dart_sdk_version": "3.13.5",
+  "application_id": "com.infinityball.mealqueue",
+  "ios_bundle_identifier": "com.infinityball.mealqueue",
+  "windows_identity_name": "cominfinityball.mealqueue",
+  "asc_registration": "CREATED com.infinityball.mealqueue (2026-10-24)",
+  "platforms_enabled": ["windows", "android", "ios"],
+  "tablet_support": "enabled",
+  "ux_strategy": "A-platform-native-adaptive",
+  "primary_ci_release_target": "windows-latest",
+  "mobile_ci": "flutter build apk --debug on ubuntu-latest; iOS compile on macOS runner later",
+  "icon": "AppStore/icon.png - pending generation via spark-media image (OpenAI Images)",
+  "network_policy": "none - app performs no network requests"
+}
