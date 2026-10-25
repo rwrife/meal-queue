@@ -3,57 +3,79 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 
 import 'app/adaptive.dart';
+import 'domain/recipe_repository.dart';
+import 'ui/recipe_library_screen.dart';
 
 void main() => runApp(const MealQueueApp());
 
-/// Empty shell. Feature controls arrive with their working feature slices.
-class MealQueueApp extends StatelessWidget {
-  const MealQueueApp({super.key});
+class MealQueueApp extends StatefulWidget {
+  const MealQueueApp({super.key, this.repository});
+
+  /// Injection for widget tests; production opens app-owned SQLite storage.
+  final RecipeRepository? repository;
+
+  @override
+  State<MealQueueApp> createState() => _MealQueueAppState();
+}
+
+class _MealQueueAppState extends State<MealQueueApp> {
+  RecipeRepository? _repository;
+  Object? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    _repository = widget.repository;
+    if (_repository == null) _open();
+  }
+
+  Future<void> _open() async {
+    try {
+      final repository = await RecipeRepository.open();
+      if (!mounted) {
+        await repository.close();
+        return;
+      }
+      setState(() => _repository = repository);
+    } catch (error) {
+      if (mounted) setState(() => _error = error);
+    }
+  }
+
+  @override
+  void dispose() {
+    if (widget.repository == null) _repository?.close();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
+    final repository = _repository;
+    final home = repository == null
+        ? Center(
+            child: Text(
+              _error == null
+                  ? 'Opening recipe library…'
+                  : 'Cannot open local recipes: $_error',
+            ),
+          )
+        : RecipeLibraryScreen(repository: repository);
     return Adaptively(
-      ios: (_) => const CupertinoApp(
+      ios: (_) => CupertinoApp(
         title: 'Meal Queue',
         debugShowCheckedModeBanner: false,
-        home: _HomeScreen(),
+        home: home,
       ),
       android: (_) => MaterialApp(
         title: 'Meal Queue',
         debugShowCheckedModeBanner: false,
         theme: ThemeData(colorSchemeSeed: Colors.deepOrange),
-        home: const _HomeScreen(),
+        home: home,
       ),
-      windows: (_) => const fluent.FluentApp(
+      windows: (_) => fluent.FluentApp(
         title: 'Meal Queue',
         debugShowCheckedModeBanner: false,
-        home: _HomeScreen(),
-      ),
-    );
-  }
-}
-
-class _HomeScreen extends StatelessWidget {
-  const _HomeScreen();
-
-  static const _empty = 'No recipes yet. Recipe library coming soon.';
-
-  @override
-  Widget build(BuildContext context) {
-    return Adaptively(
-      ios: (_) => const CupertinoPageScaffold(
-        navigationBar: CupertinoNavigationBar(middle: Text('Meal Queue')),
-        child: SafeArea(child: Center(child: Text(_empty))),
-      ),
-      android: (_) => Scaffold(
-        appBar: AppBar(title: const Text('Meal Queue')),
-        body: const Center(child: Text(_empty)),
-      ),
-      windows: (_) => const fluent.NavigationView(
-        content: fluent.ScaffoldPage(
-          header: fluent.PageHeader(title: Text('Meal Queue')),
-          content: Center(child: Text(_empty)),
-        ),
+        home: home,
       ),
     );
   }

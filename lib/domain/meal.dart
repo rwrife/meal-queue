@@ -10,6 +10,7 @@ class Recipe {
     required List<Ingredient> ingredients,
     this.steps = '',
     List<String> tags = const [],
+    this.photoPath,
   }) : ingredients = List.unmodifiable(ingredients),
        tags = List.unmodifiable(tags) {
     if (id.trim().isEmpty || title.trim().isEmpty) {
@@ -26,6 +27,7 @@ class Recipe {
   final List<Ingredient> ingredients;
   final String steps;
   final List<String> tags;
+  final String? photoPath;
 }
 
 /// [quantity] == null means "to taste" / absent quantity: never pretend
