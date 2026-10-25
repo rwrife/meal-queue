@@ -113,6 +113,7 @@ void main() {
       expect(first, startsWith('photos/'));
       expect(repo.photoFileFor(first)!.existsSync(), true);
       expect(() => repo.photoFileFor('../other.jpg'), throwsFormatException);
+      expect(() => repo.photoFileFor(r'photos\x.jpg'), throwsFormatException);
       await repo.save(
         Recipe(
           id: 'r',

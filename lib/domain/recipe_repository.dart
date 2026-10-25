@@ -54,8 +54,8 @@ class RecipeRepository {
     final photos = Directory(p.join(root.path, 'photos'));
     await photos.create(recursive: true);
     final name = '${_ids.v4()}$ext';
-    final relative = p.join('photos', name);
-    await source.copy(p.join(root.path, relative));
+    final relative = p.posix.join('photos', name);
+    await source.copy(p.join(root.path, 'photos', name));
     return relative;
   }
 
@@ -63,14 +63,19 @@ class RecipeRepository {
 
   File? photoFileFor(String? relative) {
     if (relative == null) return null;
-    // Check both spelling and resolved path. Imported filenames are UUIDs.
-    if (p.isAbsolute(relative) ||
-        p.normalize(relative) != relative ||
-        p.split(relative).length != 2 ||
-        p.split(relative).first != 'photos') {
+    // Persist POSIX separators on every OS; reject traversal and drive paths.
+    final parts = p.posix.split(relative);
+    if (p.posix.isAbsolute(relative) ||
+        p.windows.isAbsolute(relative) ||
+        relative.contains('\\') ||
+        p.posix.normalize(relative) != relative ||
+        parts.length != 2 ||
+        parts.first != 'photos' ||
+        parts.last == '.' ||
+        parts.last == '..') {
       throw FormatException('invalid stored photo path', relative);
     }
-    return File(p.join(root.path, relative));
+    return File(p.join(root.path, 'photos', parts.last));
   }
 
   Future<void> _cleanPhoto(String? relative) async {
@@ -251,7 +256,12 @@ class RecipeRepository {
     var removed = 0;
     await for (final entry in dir.list(followLinks: false)) {
       if (entry is! File) continue;
-      if (!referenced.contains(p.join('photos', p.basename(entry.path)))) {
+      if (!referenced.contains(
+        p.posix.join(
+          'photos',
+          p.posix.basename(entry.path.replaceAll('\\', '/')),
+        ),
+      )) {
         await entry.delete();
         removed++;
       }
