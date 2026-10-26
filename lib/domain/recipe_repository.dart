@@ -11,12 +11,15 @@ import 'meal.dart';
 import 'rational.dart';
 import 'unit.dart';
 
+import 'stock_repository.dart';
+
 /// On-device recipes. Caller owns DB lifecycle; photos live under [root]/photos.
 class RecipeRepository {
-  RecipeRepository(this.db, this.root);
+  RecipeRepository(this.db, this.root) : stock = StockRepository(db);
 
   final Database db;
   final Directory root;
+  final StockRepository stock;
   static const _ids = Uuid();
 
   static Future<RecipeRepository> open() async {

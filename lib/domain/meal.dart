@@ -88,10 +88,11 @@ class PlannedMeal {
   final int? servings;
 }
 
-enum StockLocation { pantry, freezer }
+enum StockLocation { pantry, freezer, fridge }
 
 class StockLot {
   StockLot({
+    this.id = '',
     required String item,
     required this.quantity,
     required this.unit,
@@ -105,6 +106,7 @@ class StockLot {
     if (quantity.isNegative) throw ArgumentError.value(quantity, 'quantity');
   }
 
+  final String id;
   final String item;
   final String itemKey;
   final Rational quantity;
@@ -112,6 +114,30 @@ class StockLot {
   final StockLocation location;
   final DateTime? date;
 }
+
+/// Advisory only: a positive lot with an exact unit label, not a stock promise.
+/// No automatic consumption or cross-unit conversions.
+bool mayHaveIngredient(Ingredient ingredient, Iterable<StockLot> lots) =>
+    lots.any(
+      (lot) =>
+          lot.quantity.compareTo(Rational.zero) > 0 &&
+          lot.itemKey == ingredient.itemKey &&
+          lot.unit.symbol == ingredient.unit.symbol,
+    );
+
+/// Only dated, positive lots get a use-first hint; dates are not safety advice.
+bool useFirst(StockLot lot, Iterable<StockLot> lots) =>
+    lot.quantity.compareTo(Rational.zero) > 0 &&
+    lot.date != null &&
+    !lots.any(
+      (other) =>
+          other.id != lot.id &&
+          other.quantity.compareTo(Rational.zero) > 0 &&
+          other.itemKey == lot.itemKey &&
+          other.unit.symbol == lot.unit.symbol &&
+          other.date != null &&
+          other.date!.isBefore(lot.date!),
+    );
 
 /// Frozen result of merging one or more planned recipes. Never reads live
 /// recipe state once constructed; checked state belongs to later persistence.

@@ -12,6 +12,7 @@ import '../domain/meal.dart';
 import '../domain/rational.dart';
 import '../domain/recipe_repository.dart';
 import '../domain/unit.dart';
+import 'stock_screen.dart';
 
 class RecipeLibraryScreen extends StatefulWidget {
   const RecipeLibraryScreen({required this.repository, super.key});
@@ -26,9 +27,12 @@ class _RecipeLibraryScreenState extends State<RecipeLibraryScreen> {
   String? tag;
   List<Recipe> recipes = [];
   List<String> tags = [];
+  List<StockLot> stockLots = [];
   bool loading = true;
   int revision = 0;
   bool editing = false;
+  bool viewing = false;
+  bool showingStock = false;
   Recipe? selected;
   String? error;
 
@@ -43,10 +47,12 @@ class _RecipeLibraryScreenState extends State<RecipeLibraryScreen> {
     try {
       final results = await widget.repository.list(query: query, tag: tag);
       final available = await widget.repository.tags();
+      final stock = await widget.repository.stock.list();
       if (!mounted || request != revision) return;
       setState(() {
         recipes = results;
         tags = available;
+        stockLots = stock;
         loading = false;
         error = null;
       });
@@ -131,7 +137,24 @@ class _RecipeLibraryScreenState extends State<RecipeLibraryScreen> {
   void openEditor([Recipe? recipe]) => setState(() {
     selected = recipe;
     editing = true;
+    viewing = false;
+    showingStock = false;
   });
+
+  void openDetail(Recipe recipe) => setState(() {
+    selected = recipe;
+    viewing = true;
+    editing = false;
+    showingStock = false;
+  });
+
+  void back() {
+    setState(() {
+      viewing = false;
+      showingStock = false;
+    });
+    reload();
+  }
 
   void closeEditor(bool saved) {
     setState(() => editing = false);
@@ -140,34 +163,52 @@ class _RecipeLibraryScreenState extends State<RecipeLibraryScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final content = editing
+    final content = showingStock
+        ? StockScreen(
+            repository: widget.repository.stock,
+            onBack: back,
+            key: const Key('stock-screen'),
+          )
+        : editing
         ? RecipeEditorScreen(
             key: ValueKey(selected?.id ?? 'new'),
             repository: widget.repository,
             recipe: selected,
             onDone: closeEditor,
           )
+        : viewing
+        ? _detail(selected!)
         : _library();
+    if (showingStock) return content;
     final heading = editing
         ? (selected == null ? 'New Recipe' : 'Edit Recipe')
+        : viewing
+        ? selected!.title
         : 'Recipe Library';
+    final onBack = editing ? () => closeEditor(false) : back;
+    final hasBack = editing || viewing;
+    final onAdd = viewing ? () => openEditor(selected) : () => openEditor();
+    final addLabel = viewing ? 'Edit recipe' : 'New recipe';
+    final addIcon = viewing ? fluent.FluentIcons.edit : fluent.FluentIcons.add;
     return Adaptively(
       ios: (_) => CupertinoPageScaffold(
         navigationBar: CupertinoNavigationBar(
           middle: Text(heading),
-          leading: editing
+          leading: hasBack
               ? CupertinoButton(
                   padding: EdgeInsets.zero,
-                  onPressed: () => closeEditor(false),
-                  child: const Text('Cancel'),
+                  onPressed: onBack,
+                  child: Text(editing ? 'Cancel' : 'Back'),
                 )
               : null,
           trailing: editing
               ? null
               : CupertinoButton(
                   padding: EdgeInsets.zero,
-                  onPressed: () => openEditor(),
-                  child: const Icon(CupertinoIcons.add),
+                  onPressed: onAdd,
+                  child: Icon(
+                    viewing ? CupertinoIcons.pencil : CupertinoIcons.add,
+                  ),
                 ),
         ),
         child: SafeArea(child: content),
@@ -175,16 +216,16 @@ class _RecipeLibraryScreenState extends State<RecipeLibraryScreen> {
       android: (_) => material.Scaffold(
         appBar: material.AppBar(
           title: Text(heading),
-          leading: editing
-              ? material.BackButton(onPressed: () => closeEditor(false))
-              : null,
+          leading: hasBack ? material.BackButton(onPressed: onBack) : null,
           actions: editing
               ? null
               : [
                   material.IconButton(
-                    tooltip: 'New recipe',
-                    onPressed: () => openEditor(),
-                    icon: const Icon(material.Icons.add),
+                    tooltip: addLabel,
+                    onPressed: onAdd,
+                    icon: Icon(
+                      viewing ? material.Icons.edit : material.Icons.add,
+                    ),
                   ),
                 ],
         ),
@@ -196,17 +237,17 @@ class _RecipeLibraryScreenState extends State<RecipeLibraryScreen> {
             title: Text(heading),
             commandBar: fluent.CommandBar(
               primaryItems: [
-                if (editing)
+                if (hasBack)
                   fluent.CommandBarButton(
                     icon: const Icon(fluent.FluentIcons.back),
-                    label: const Text('Cancel'),
-                    onPressed: () => closeEditor(false),
-                  )
-                else
+                    label: Text(editing ? 'Cancel' : 'Back'),
+                    onPressed: onBack,
+                  ),
+                if (!editing)
                   fluent.CommandBarButton(
-                    icon: const Icon(fluent.FluentIcons.add),
-                    label: const Text('New recipe'),
-                    onPressed: () => openEditor(),
+                    icon: Icon(addIcon),
+                    label: Text(addLabel),
+                    onPressed: onAdd,
                   ),
               ],
             ),
@@ -217,8 +258,29 @@ class _RecipeLibraryScreenState extends State<RecipeLibraryScreen> {
     );
   }
 
+  Widget _detail(Recipe recipe) => ListView(
+    key: const Key('recipe-detail'),
+    padding: const EdgeInsets.all(16),
+    children: [
+      Text('${recipe.servings} servings'),
+      for (final ingredient in recipe.ingredients)
+        Padding(
+          padding: const EdgeInsets.symmetric(vertical: 6),
+          child: Text(
+            '${ingredient.quantity ?? ''} ${ingredient.unit.symbol} ${ingredient.item}'
+            '${stockLots.isNotEmpty && mayHaveIngredient(ingredient, stockLots) ? ' · You may already have this' : ''}',
+          ),
+        ),
+      if (recipe.steps.isNotEmpty) Text(recipe.steps),
+    ],
+  );
+
   Widget _library() => Column(
     children: [
+      Padding(
+        padding: const EdgeInsets.all(12),
+        child: _button('Stock', () => setState(() => showingStock = true)),
+      ),
       Padding(
         padding: const EdgeInsets.all(12),
         child: _field('Search recipes', null, (value) {
@@ -279,7 +341,7 @@ class _RecipeLibraryScreenState extends State<RecipeLibraryScreen> {
                         Expanded(
                           child: _button(
                             '${recipe.title} · ${recipe.servings} servings · ${recipe.tags.join(', ')}',
-                            () => openEditor(recipe),
+                            () => openDetail(recipe),
                           ),
                         ),
                         _button('Delete', () => remove(recipe)),
