@@ -77,8 +77,8 @@ void main() {
       await tester.pumpAndSettle();
 
       // Persisted override proves dialog saved independently of visual label.
-      final meals = await planner.week(monday);
-      expect(meals.single.recipeId, 'soup');
+      final meals = await tester.runAsync(() => planner.week(monday));
+      expect(meals!.single.recipeId, 'soup');
       expect(meals.single.servings, 5);
       for (
         var i = 0;
