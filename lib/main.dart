@@ -2,7 +2,6 @@ import 'package:fluent_ui/fluent_ui.dart' as fluent;
 import 'package:flutter/cupertino.dart' as cupertino;
 import 'package:flutter/material.dart' as material;
 import 'package:flutter/widgets.dart';
-import 'package:flutter/foundation.dart';
 
 import 'app/adaptive.dart';
 import 'domain/recipe_repository.dart';

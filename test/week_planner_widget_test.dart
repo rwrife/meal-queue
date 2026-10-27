@@ -1,7 +1,6 @@
 import 'dart:io';
 
 import 'package:flutter/foundation.dart';
-import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mealqueue/domain/database_schema.dart';
 import 'package:mealqueue/domain/meal.dart';
@@ -77,7 +76,17 @@ void main() {
       await tester.tap(find.byKey(const Key('save-slot')));
       await tester.pumpAndSettle();
 
-      // Slot now shows Soup (5 servings)
+      // Persisted override proves dialog saved independently of visual label.
+      final meals = await planner.week(monday);
+      expect(meals.single.recipeId, 'soup');
+      expect(meals.single.servings, 5);
+      for (
+        var i = 0;
+        i < 20 && find.textContaining('Soup (5 servings)').evaluate().isEmpty;
+        i++
+      ) {
+        await tester.pump(const Duration(milliseconds: 100));
+      }
       expect(find.textContaining('Soup (5 servings)'), findsOneWidget);
 
       // Cook the meal

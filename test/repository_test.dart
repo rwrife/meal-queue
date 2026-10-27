@@ -49,7 +49,11 @@ void main() {
         'shopping_lines',
       ]),
     );
-    await AppDatabaseSchema.onUpgrade(repo.db, 1, 1); // no-op
+    await AppDatabaseSchema.onUpgrade(
+      repo.db,
+      2,
+      2,
+    ); // no-op - migration tested separately.
     expect(await repo.db.rawQuery('PRAGMA foreign_keys'), [
       {'foreign_keys': 1},
     ]);
