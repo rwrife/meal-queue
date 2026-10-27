@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:flutter/foundation.dart';
+import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mealqueue/domain/database_schema.dart';
 import 'package:mealqueue/domain/meal.dart';
@@ -64,8 +65,21 @@ void main() {
       final slotFinder = find.byKey(Key('slot-$mondayKey:Lunch'));
       expect(slotFinder, findsOneWidget);
 
-      // Tap to edit slot
-      await tester.tap(slotFinder);
+      // SQLite refresh runs outside Flutter's fake clock. Wait for loaded
+      // recipe controls before opening a dialog that snapshots available recipes.
+      for (var i = 0; i < 50; i++) {
+        await tester.runAsync(
+          () => Future<void>.delayed(const Duration(milliseconds: 100)),
+        );
+        await tester.pump();
+        await tester.tap(slotFinder);
+        await tester.pumpAndSettle();
+        if (find.byKey(const Key('recipe-soup')).evaluate().isNotEmpty) break;
+        await tester.tap(find.text('Cancel'));
+        await tester.pumpAndSettle();
+      }
+      expect(find.byKey(const Key('recipe-soup')), findsOneWidget);
+      await tester.tap(find.byKey(const Key('recipe-soup')));
       await tester.pumpAndSettle();
 
       // Set servings override to 5
@@ -108,12 +122,25 @@ void main() {
       await tester.tap(cookFinder);
       await tester.pumpAndSettle();
 
-      // Undo button appears
+      // SQLite writes finish on real clock, not pumpAndSettle's fake clock.
+      for (var i = 0; i < 50; i++) {
+        if (find.byKey(const Key('undo-cooked')).evaluate().isNotEmpty) break;
+        await tester.runAsync(
+          () => Future<void>.delayed(const Duration(milliseconds: 100)),
+        );
+        await tester.pump();
+      }
       expect(find.byKey(const Key('undo-cooked')), findsOneWidget);
 
-      // Undo cooked
       await tester.tap(find.byKey(const Key('undo-cooked')));
       await tester.pumpAndSettle();
+      for (var i = 0; i < 50; i++) {
+        if (find.byKey(const Key('undo-cooked')).evaluate().isEmpty) break;
+        await tester.runAsync(
+          () => Future<void>.delayed(const Duration(milliseconds: 100)),
+        );
+        await tester.pump();
+      }
       expect(find.byKey(const Key('undo-cooked')), findsNothing);
 
       // Copy last week
