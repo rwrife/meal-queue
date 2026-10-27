@@ -12,6 +12,7 @@ import '../domain/meal.dart';
 import '../domain/rational.dart';
 import '../domain/recipe_repository.dart';
 import '../domain/unit.dart';
+import '../domain/week_planner.dart';
 import 'stock_screen.dart';
 
 class RecipeLibraryScreen extends StatefulWidget {
@@ -263,6 +264,15 @@ class _RecipeLibraryScreenState extends State<RecipeLibraryScreen> {
     padding: const EdgeInsets.all(16),
     children: [
       Text('${recipe.servings} servings'),
+      FutureBuilder<List<CookEvent>>(
+        future: WeekPlanner(widget.repository).history(recipeId: recipe.id),
+        builder: (_, snapshot) {
+          final events = snapshot.data ?? [];
+          return Text(
+            'Cooked ${events.length} times${events.isEmpty ? '' : ' · Last cooked ${dayKey(events.first.cookedAt)}'}',
+          );
+        },
+      ),
       for (final ingredient in recipe.ingredients)
         Padding(
           padding: const EdgeInsets.symmetric(vertical: 6),
