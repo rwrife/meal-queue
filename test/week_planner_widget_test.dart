@@ -107,12 +107,14 @@ void main() {
       );
       expect(meals!.single.recipeId, 'soup');
       expect(meals.single.servings, 5);
-      for (
-        var i = 0;
-        i < 20 && find.textContaining('Soup (5 servings)').evaluate().isEmpty;
-        i++
-      ) {
-        await tester.pump(const Duration(milliseconds: 100));
+      for (var i = 0; i < 50; i++) {
+        if (find.textContaining('Soup (5 servings)').evaluate().isNotEmpty) {
+          break;
+        }
+        await tester.runAsync(
+          () => Future<void>.delayed(const Duration(milliseconds: 100)),
+        );
+        await tester.pump();
       }
       expect(find.textContaining('Soup (5 servings)'), findsOneWidget);
 
