@@ -1,10 +1,14 @@
 import 'package:fluent_ui/fluent_ui.dart' as fluent;
-import 'package:flutter/cupertino.dart';
-import 'package:flutter/material.dart';
+import 'package:flutter/cupertino.dart' as cupertino;
+import 'package:flutter/material.dart' as material;
+import 'package:flutter/widgets.dart';
+import 'package:flutter/foundation.dart';
 
 import 'app/adaptive.dart';
 import 'domain/recipe_repository.dart';
 import 'ui/recipe_library_screen.dart';
+import 'ui/week_planner_screen.dart';
+import 'domain/week_planner.dart';
 
 void main() => runApp(const MealQueueApp());
 
@@ -20,6 +24,7 @@ class MealQueueApp extends StatefulWidget {
 
 class _MealQueueAppState extends State<MealQueueApp> {
   RecipeRepository? _repository;
+  bool _planning = false;
   Object? _error;
 
   @override
@@ -59,17 +64,67 @@ class _MealQueueAppState extends State<MealQueueApp> {
                   : 'Cannot open local recipes: $_error',
             ),
           )
-        : RecipeLibraryScreen(repository: repository);
+        : Column(
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Adaptively(
+                    ios: (_) => cupertino.CupertinoButton(
+                      key: const Key('nav-recipes'),
+                      onPressed: () => setState(() => _planning = false),
+                      child: const Text('Recipes'),
+                    ),
+                    android: (_) => material.TextButton(
+                      key: const Key('nav-recipes'),
+                      onPressed: () => setState(() => _planning = false),
+                      child: const Text('Recipes'),
+                    ),
+                    windows: (_) => fluent.Button(
+                      key: const Key('nav-recipes'),
+                      onPressed: () => setState(() => _planning = false),
+                      child: const Text('Recipes'),
+                    ),
+                  ),
+                  Adaptively(
+                    ios: (_) => cupertino.CupertinoButton(
+                      key: const Key('nav-planner'),
+                      onPressed: () => setState(() => _planning = true),
+                      child: const Text('Planner'),
+                    ),
+                    android: (_) => material.TextButton(
+                      key: const Key('nav-planner'),
+                      onPressed: () => setState(() => _planning = true),
+                      child: const Text('Planner'),
+                    ),
+                    windows: (_) => fluent.Button(
+                      key: const Key('nav-planner'),
+                      onPressed: () => setState(() => _planning = true),
+                      child: const Text('Planner'),
+                    ),
+                  ),
+                ],
+              ),
+              Expanded(
+                child: _planning
+                    ? WeekPlannerScreen(
+                        recipes: repository,
+                        planner: WeekPlanner(repository),
+                      )
+                    : RecipeLibraryScreen(repository: repository),
+              ),
+            ],
+          );
     return Adaptively(
-      ios: (_) => CupertinoApp(
+      ios: (_) => cupertino.CupertinoApp(
         title: 'Meal Queue',
         debugShowCheckedModeBanner: false,
         home: home,
       ),
-      android: (_) => MaterialApp(
+      android: (_) => material.MaterialApp(
         title: 'Meal Queue',
         debugShowCheckedModeBanner: false,
-        theme: ThemeData(colorSchemeSeed: Colors.deepOrange),
+        theme: material.ThemeData(colorSchemeSeed: material.Colors.deepOrange),
         home: home,
       ),
       windows: (_) => fluent.FluentApp(

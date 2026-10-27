@@ -10,8 +10,9 @@ import 'package:sqflite/sqflite.dart' show Database;
 /// - stock_lot stub (id, item, quantity_num, quantity_den, unit_symbol, location, best_by_date)
 /// - shopping_line stub (id, snapshot_id, item, quantity_num, quantity_den, unit_symbol, aisle, is_checked, sort_order)
 /// - shopping_snapshot stub (id, created_at, label)
+/// Version 2: cooked events and unique day/slot constraint.
 class AppDatabaseSchema {
-  static const int currentVersion = 1;
+  static const int currentVersion = 2;
 
   static Future<void> createSchema(Database db) async {
     final batch = db.batch();
@@ -100,6 +101,19 @@ class AppDatabaseSchema {
       );
     ''');
 
+    batch.execute(
+      'CREATE UNIQUE INDEX idx_plan_slot ON planned_meals(plan_date, slot);',
+    );
+    batch.execute('''
+      CREATE TABLE cook_events (
+        id TEXT PRIMARY KEY,
+        plan_date TEXT NOT NULL,
+        slot TEXT NOT NULL,
+        recipe_id TEXT,
+        recipe_title TEXT NOT NULL,
+        cooked_at INTEGER NOT NULL
+      );
+    ''');
     await batch.commit(noResult: true);
   }
 
@@ -108,10 +122,27 @@ class AppDatabaseSchema {
     int oldVersion,
     int newVersion,
   ) async {
-    // Migration scaffolding: handle schema versions as app evolves.
-    // When schema reaches v2, migrations from v1 -> v2 go here.
     if (oldVersion < 1) {
       await createSchema(db);
+    } else if (oldVersion < 2) {
+      // Existing v1 has no slot uniqueness; preserve newest row per slot.
+      await db.execute('''
+        DELETE FROM planned_meals WHERE rowid NOT IN
+        (SELECT MAX(rowid) FROM planned_meals GROUP BY plan_date, slot)
+      ''');
+      await db.execute(
+        'CREATE UNIQUE INDEX idx_plan_slot ON planned_meals(plan_date, slot)',
+      );
+      await db.execute('''
+        CREATE TABLE cook_events (
+          id TEXT PRIMARY KEY,
+          plan_date TEXT NOT NULL,
+          slot TEXT NOT NULL,
+          recipe_id TEXT,
+          recipe_title TEXT NOT NULL,
+          cooked_at INTEGER NOT NULL
+        )
+      ''');
     }
   }
 }

@@ -33,7 +33,7 @@ void main() {
   });
 
   test('schema version, tables, migration scaffold and foreign keys', () async {
-    expect(await repo.db.getVersion(), 1);
+    expect(await repo.db.getVersion(), 2);
     final tables = await repo.db.rawQuery(
       "SELECT name FROM sqlite_master WHERE type = 'table'",
     );
