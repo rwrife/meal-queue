@@ -77,7 +77,20 @@ void main() {
       await tester.pumpAndSettle();
 
       // Persisted override proves dialog saved independently of visual label.
-      final meals = await tester.runAsync(() => planner.week(monday));
+      final meals = await tester.runAsync(() async {
+        for (var i = 0; i < 50; i++) {
+          final rows = await planner.week(monday);
+          if (rows.isNotEmpty) return rows;
+          await Future<void>.delayed(const Duration(milliseconds: 100));
+        }
+        return planner.week(monday);
+      });
+      expect(
+        meals,
+        isNotEmpty,
+        reason:
+            'Saving slot must persist to SQLite; UI: ${tester.widgetList<Text>(find.byType(Text)).map((w) => w.data).toList()}',
+      );
       expect(meals!.single.recipeId, 'soup');
       expect(meals.single.servings, 5);
       for (
