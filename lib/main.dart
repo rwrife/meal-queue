@@ -6,6 +6,7 @@ import 'package:flutter/widgets.dart';
 import 'app/adaptive.dart';
 import 'domain/recipe_repository.dart';
 import 'ui/recipe_library_screen.dart';
+import 'ui/shopping_screen.dart';
 import 'ui/week_planner_screen.dart';
 import 'domain/week_planner.dart';
 
@@ -23,7 +24,7 @@ class MealQueueApp extends StatefulWidget {
 
 class _MealQueueAppState extends State<MealQueueApp> {
   RecipeRepository? _repository;
-  bool _planning = false;
+  int _tab = 0;
   Object? _error;
 
   @override
@@ -71,46 +72,65 @@ class _MealQueueAppState extends State<MealQueueApp> {
                   Adaptively(
                     ios: (_) => cupertino.CupertinoButton(
                       key: const Key('nav-recipes'),
-                      onPressed: () => setState(() => _planning = false),
+                      onPressed: () => setState(() => _tab = 0),
                       child: const Text('Recipes'),
                     ),
                     android: (_) => material.TextButton(
                       key: const Key('nav-recipes'),
-                      onPressed: () => setState(() => _planning = false),
+                      onPressed: () => setState(() => _tab = 0),
                       child: const Text('Recipes'),
                     ),
                     windows: (_) => fluent.Button(
                       key: const Key('nav-recipes'),
-                      onPressed: () => setState(() => _planning = false),
+                      onPressed: () => setState(() => _tab = 0),
                       child: const Text('Recipes'),
                     ),
                   ),
                   Adaptively(
                     ios: (_) => cupertino.CupertinoButton(
                       key: const Key('nav-planner'),
-                      onPressed: () => setState(() => _planning = true),
+                      onPressed: () => setState(() => _tab = 1),
                       child: const Text('Planner'),
                     ),
                     android: (_) => material.TextButton(
                       key: const Key('nav-planner'),
-                      onPressed: () => setState(() => _planning = true),
+                      onPressed: () => setState(() => _tab = 1),
                       child: const Text('Planner'),
                     ),
                     windows: (_) => fluent.Button(
                       key: const Key('nav-planner'),
-                      onPressed: () => setState(() => _planning = true),
+                      onPressed: () => setState(() => _tab = 1),
                       child: const Text('Planner'),
+                    ),
+                  ),
+                  Adaptively(
+                    ios: (_) => cupertino.CupertinoButton(
+                      key: const Key('nav-shopping'),
+                      onPressed: () => setState(() => _tab = 2),
+                      child: const Text('Shopping'),
+                    ),
+                    android: (_) => material.TextButton(
+                      key: const Key('nav-shopping'),
+                      onPressed: () => setState(() => _tab = 2),
+                      child: const Text('Shopping'),
+                    ),
+                    windows: (_) => fluent.Button(
+                      key: const Key('nav-shopping'),
+                      onPressed: () => setState(() => _tab = 2),
+                      child: const Text('Shopping'),
                     ),
                   ),
                 ],
               ),
               Expanded(
-                child: _planning
-                    ? WeekPlannerScreen(
-                        recipes: repository,
-                        planner: WeekPlanner(repository),
-                      )
-                    : RecipeLibraryScreen(repository: repository),
+                child: switch (_tab) {
+                  1 => WeekPlannerScreen(
+                    recipes: repository,
+                    planner: WeekPlanner(repository),
+                  ),
+                  2 => ShoppingScreen(recipes: repository),
+                  _ => RecipeLibraryScreen(repository: repository),
+                },
               ),
             ],
           );

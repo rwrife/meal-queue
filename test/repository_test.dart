@@ -33,7 +33,7 @@ void main() {
   });
 
   test('schema version, tables, migration scaffold and foreign keys', () async {
-    expect(await repo.db.getVersion(), 2);
+    expect(await repo.db.getVersion(), 3);
     final tables = await repo.db.rawQuery(
       "SELECT name FROM sqlite_master WHERE type = 'table'",
     );
@@ -47,12 +47,13 @@ void main() {
         'stock_lots',
         'shopping_snapshots',
         'shopping_lines',
+        'aisle_orders',
       ]),
     );
     await AppDatabaseSchema.onUpgrade(
       repo.db,
-      2,
-      2,
+      3,
+      3,
     ); // no-op - migration tested separately.
     expect(await repo.db.rawQuery('PRAGMA foreign_keys'), [
       {'foreign_keys': 1},

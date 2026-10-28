@@ -11,8 +11,9 @@ import 'package:sqflite/sqflite.dart' show Database;
 /// - shopping_line stub (id, snapshot_id, item, quantity_num, quantity_den, unit_symbol, aisle, is_checked, sort_order)
 /// - shopping_snapshot stub (id, created_at, label)
 /// Version 2: cooked events and unique day/slot constraint.
+/// Version 3: frozen list metadata, manual lines and user aisle ordering.
 class AppDatabaseSchema {
-  static const int currentVersion = 2;
+  static const int currentVersion = 3;
 
   static Future<void> createSchema(Database db) async {
     final batch = db.batch();
@@ -83,7 +84,8 @@ class AppDatabaseSchema {
       CREATE TABLE shopping_snapshots (
         id TEXT PRIMARY KEY,
         created_at INTEGER NOT NULL,
-        label TEXT NOT NULL DEFAULT ''
+        label TEXT NOT NULL DEFAULT '',
+        completed_at INTEGER
       );
     ''');
 
@@ -97,6 +99,14 @@ class AppDatabaseSchema {
         unit_symbol TEXT NOT NULL DEFAULT '',
         aisle TEXT NOT NULL DEFAULT '',
         is_checked INTEGER NOT NULL DEFAULT 0,
+        sort_order INTEGER NOT NULL DEFAULT 0,
+        is_manual INTEGER NOT NULL DEFAULT 0
+      );
+    ''');
+
+    batch.execute('''
+      CREATE TABLE aisle_orders (
+        aisle TEXT PRIMARY KEY,
         sort_order INTEGER NOT NULL DEFAULT 0
       );
     ''');
@@ -143,6 +153,17 @@ class AppDatabaseSchema {
           cooked_at INTEGER NOT NULL
         )
       ''');
+    }
+    if (oldVersion < 3) {
+      await db.execute(
+        'ALTER TABLE shopping_snapshots ADD COLUMN completed_at INTEGER',
+      );
+      await db.execute(
+        'ALTER TABLE shopping_lines ADD COLUMN is_manual INTEGER NOT NULL DEFAULT 0',
+      );
+      await db.execute(
+        'CREATE TABLE aisle_orders (aisle TEXT PRIMARY KEY, sort_order INTEGER NOT NULL DEFAULT 0)',
+      );
     }
   }
 }
