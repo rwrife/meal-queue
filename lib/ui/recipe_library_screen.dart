@@ -1,10 +1,7 @@
 import 'dart:io';
 
 import 'package:file_selector/file_selector.dart';
-import 'package:fluent_ui/fluent_ui.dart' as fluent;
-import 'package:flutter/cupertino.dart';
-import 'package:flutter/foundation.dart';
-import 'package:flutter/material.dart' as material;
+import 'package:flutter/widgets.dart';
 import 'package:uuid/uuid.dart';
 
 import '../app/adaptive.dart';
@@ -33,7 +30,6 @@ class _RecipeLibraryScreenState extends State<RecipeLibraryScreen> {
   int revision = 0;
   bool editing = false;
   bool viewing = false;
-  bool showingStock = false;
   Recipe? selected;
   String? error;
 
@@ -67,92 +63,103 @@ class _RecipeLibraryScreenState extends State<RecipeLibraryScreen> {
   }
 
   Future<void> remove(Recipe recipe) async {
-    final bool? confirmed;
-    if (defaultTargetPlatform == TargetPlatform.iOS ||
-        defaultTargetPlatform == TargetPlatform.macOS) {
-      confirmed = await showCupertinoDialog<bool>(
-        context: context,
-        builder: (ctx) => CupertinoAlertDialog(
-          title: const Text('Delete recipe?'),
-          content: Text(recipe.title),
-          actions: [
-            CupertinoDialogAction(
-              child: const Text('Cancel'),
-              onPressed: () => Navigator.pop(ctx, false),
-            ),
-            CupertinoDialogAction(
-              isDestructiveAction: true,
-              child: const Text('Delete'),
-              onPressed: () => Navigator.pop(ctx, true),
-            ),
-          ],
-        ),
-      );
-    } else if (defaultTargetPlatform == TargetPlatform.windows ||
-        defaultTargetPlatform == TargetPlatform.linux) {
-      confirmed = await fluent.showDialog<bool>(
-        context: context,
-        builder: (ctx) => fluent.ContentDialog(
-          title: const Text('Delete recipe?'),
-          content: Text(recipe.title),
-          actions: [
-            fluent.Button(
-              child: const Text('Cancel'),
-              onPressed: () => Navigator.pop(ctx, false),
-            ),
-            fluent.FilledButton(
-              child: const Text('Delete'),
-              onPressed: () => Navigator.pop(ctx, true),
-            ),
-          ],
-        ),
-      );
-    } else {
-      confirmed = await material.showDialog<bool>(
-        context: context,
-        builder: (ctx) => material.AlertDialog(
-          title: const Text('Delete recipe?'),
-          content: Text(recipe.title),
-          actions: [
-            material.TextButton(
-              onPressed: () => Navigator.pop(ctx, false),
-              child: const Text('Cancel'),
-            ),
-            material.TextButton(
-              onPressed: () => Navigator.pop(ctx, true),
-              child: const Text('Delete'),
-            ),
-          ],
-        ),
-      );
-    }
+    final confirmed = await confirmAdaptiveDelete(
+      context,
+      'Delete ${recipe.title}?',
+    );
     if (confirmed != true) return;
     try {
       await widget.repository.delete(recipe.id);
+      if (mounted && selected?.id == recipe.id) {
+        setState(() {
+          selected = null;
+          viewing = false;
+          editing = false;
+        });
+      }
       await reload();
     } catch (e) {
       if (mounted) setState(() => error = '$e');
     }
   }
 
-  void openEditor([Recipe? recipe]) => setState(() {
-    selected = recipe;
-    editing = true;
-    viewing = false;
-    showingStock = false;
-  });
+  bool get split => MediaQuery.sizeOf(context).width >= 720;
 
-  void openDetail(Recipe recipe) => setState(() {
-    selected = recipe;
-    viewing = true;
-    editing = false;
-    showingStock = false;
-  });
+  void openEditor([Recipe? recipe]) {
+    if (!split) {
+      Navigator.of(context).push(
+        adaptivePageRoute<void>(
+          (ctx) => AdaptiveScaffold(
+            title: recipe == null ? 'New Recipe' : 'Edit Recipe',
+            onBack: () => Navigator.pop(ctx),
+            body: RecipeEditorScreen(
+              repository: widget.repository,
+              recipe: recipe,
+              onDone: (saved) {
+                Navigator.pop(ctx);
+                if (saved) reload();
+              },
+            ),
+          ),
+        ),
+      );
+      return;
+    }
+    setState(() {
+      selected = recipe;
+      editing = true;
+      viewing = false;
+    });
+  }
+
+  void openDetail(Recipe recipe) {
+    if (!split) {
+      Navigator.of(context)
+          .push(
+            adaptivePageRoute<void>(
+              (ctx) => AdaptiveScaffold(
+                title: recipe.title,
+                onBack: () => Navigator.pop(ctx),
+                actionLabel: 'Edit recipe',
+                onAction: () {
+                  Navigator.pop(ctx);
+                  openEditor(recipe);
+                },
+                body: _detail(recipe),
+              ),
+            ),
+          )
+          .then((_) {
+            if (mounted) reload();
+          });
+      return;
+    }
+    setState(() {
+      selected = recipe;
+      viewing = true;
+      editing = false;
+    });
+  }
+
+  void openStock() {
+    Navigator.of(context)
+        .push(
+          adaptivePageRoute<void>(
+            (ctx) => StockScreen(
+              key: const Key('stock-screen'),
+              repository: widget.repository.stock,
+              onBack: () => Navigator.pop(ctx),
+            ),
+          ),
+        )
+        .then((_) {
+          if (mounted) reload();
+        });
+  }
 
   void back() {
     setState(() {
       viewing = false;
-      showingStock = false;
     });
     reload();
   }
@@ -164,13 +171,7 @@ class _RecipeLibraryScreenState extends State<RecipeLibraryScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final content = showingStock
-        ? StockScreen(
-            repository: widget.repository.stock,
-            onBack: back,
-            key: const Key('stock-screen'),
-          )
-        : editing
+    final content = editing
         ? RecipeEditorScreen(
             key: ValueKey(selected?.id ?? 'new'),
             repository: widget.repository,
@@ -180,7 +181,6 @@ class _RecipeLibraryScreenState extends State<RecipeLibraryScreen> {
         : viewing
         ? _detail(selected!)
         : _library();
-    if (showingStock) return content;
     final heading = editing
         ? (selected == null ? 'New Recipe' : 'Edit Recipe')
         : viewing
@@ -190,71 +190,35 @@ class _RecipeLibraryScreenState extends State<RecipeLibraryScreen> {
     final hasBack = editing || viewing;
     final onAdd = viewing ? () => openEditor(selected) : () => openEditor();
     final addLabel = viewing ? 'Edit recipe' : 'New recipe';
-    final addIcon = viewing ? fluent.FluentIcons.edit : fluent.FluentIcons.add;
-    return Adaptively(
-      ios: (_) => CupertinoPageScaffold(
-        navigationBar: CupertinoNavigationBar(
-          middle: Text(heading),
-          leading: hasBack
-              ? CupertinoButton(
-                  padding: EdgeInsets.zero,
-                  onPressed: onBack,
-                  child: Text(editing ? 'Cancel' : 'Back'),
-                )
-              : null,
-          trailing: editing
-              ? null
-              : CupertinoButton(
-                  padding: EdgeInsets.zero,
-                  onPressed: onAdd,
-                  child: Icon(
-                    viewing ? CupertinoIcons.pencil : CupertinoIcons.add,
-                  ),
+    return PopScope(
+      canPop: !hasBack,
+      onPopInvokedWithResult: (didPop, result) {
+        if (!didPop && hasBack) onBack();
+      },
+      child: AdaptiveScaffold(
+        title: heading,
+        body: LayoutBuilder(
+          builder: (context, constraints) {
+            if (MediaQuery.sizeOf(context).width < 720) return content;
+            return Row(
+              key: const Key('recipe-split'),
+              children: [
+                SizedBox(width: constraints.maxWidth * .42, child: _library()),
+                Expanded(
+                  child: editing || viewing
+                      ? content
+                      : const Center(
+                          child: Text('Select a recipe to view details'),
+                        ),
                 ),
-        ),
-        child: SafeArea(child: content),
-      ),
-      android: (_) => material.Scaffold(
-        appBar: material.AppBar(
-          title: Text(heading),
-          leading: hasBack ? material.BackButton(onPressed: onBack) : null,
-          actions: editing
-              ? null
-              : [
-                  material.IconButton(
-                    tooltip: addLabel,
-                    onPressed: onAdd,
-                    icon: Icon(
-                      viewing ? material.Icons.edit : material.Icons.add,
-                    ),
-                  ),
-                ],
-        ),
-        body: content,
-      ),
-      windows: (_) => fluent.NavigationView(
-        content: fluent.ScaffoldPage(
-          header: fluent.PageHeader(
-            title: Text(heading),
-            commandBar: fluent.CommandBar(
-              primaryItems: [
-                if (hasBack)
-                  fluent.CommandBarButton(
-                    icon: const Icon(fluent.FluentIcons.back),
-                    label: Text(editing ? 'Cancel' : 'Back'),
-                    onPressed: onBack,
-                  ),
-                if (!editing)
-                  fluent.CommandBarButton(
-                    icon: Icon(addIcon),
-                    label: Text(addLabel),
-                    onPressed: onAdd,
-                  ),
               ],
-            ),
-          ),
-          content: content,
+            );
+          },
         ),
+        onBack: hasBack ? onBack : null,
+        actionLabel: editing ? null : addLabel,
+        onAction: editing ? null : onAdd,
+        largeTitle: !hasBack,
       ),
     );
   }
@@ -289,7 +253,7 @@ class _RecipeLibraryScreenState extends State<RecipeLibraryScreen> {
     children: [
       Padding(
         padding: const EdgeInsets.all(12),
-        child: _button('Stock', () => setState(() => showingStock = true)),
+        child: _button('Stock', openStock),
       ),
       Padding(
         padding: const EdgeInsets.all(12),
@@ -300,7 +264,7 @@ class _RecipeLibraryScreenState extends State<RecipeLibraryScreen> {
       ),
       if (tags.isNotEmpty)
         SizedBox(
-          height: 48,
+          height: 48 * MediaQuery.textScalerOf(context).scale(1),
           child: ListView(
             scrollDirection: Axis.horizontal,
             children: [
@@ -339,23 +303,26 @@ class _RecipeLibraryScreenState extends State<RecipeLibraryScreen> {
                       horizontal: 12,
                       vertical: 4,
                     ),
-                    child: Row(
-                      children: [
-                        if (photo != null && photo.existsSync())
-                          Image.file(
-                            photo,
-                            width: 48,
-                            height: 48,
-                            fit: BoxFit.cover,
-                          ),
-                        Expanded(
-                          child: _button(
+                    child: AdaptiveContextMenu(
+                      onEdit: () => openEditor(recipe),
+                      onDelete: () => remove(recipe),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          if (photo != null && photo.existsSync())
+                            Image.file(
+                              photo,
+                              width: 48,
+                              height: 48,
+                              fit: BoxFit.cover,
+                            ),
+                          _button(
                             '${recipe.title} · ${recipe.servings} servings · ${recipe.tags.join(', ')}',
                             () => openDetail(recipe),
                           ),
-                        ),
-                        _button('Delete', () => remove(recipe)),
-                      ],
+                          _button('Delete', () => remove(recipe)),
+                        ],
+                      ),
                     ),
                   );
                 },
@@ -372,40 +339,16 @@ Widget _field(
   ValueChanged<String> onChanged, {
   Key? key,
   int maxLines = 1,
-}) => Adaptively(
-  ios: (_) => CupertinoTextField(
-    key: key,
-    controller: controller,
-    placeholder: label,
-    maxLines: maxLines,
-    onChanged: onChanged,
-  ),
-  android: (_) => material.TextField(
-    key: key,
-    controller: controller,
-    decoration: material.InputDecoration(labelText: label),
-    maxLines: maxLines,
-    onChanged: onChanged,
-  ),
-  windows: (_) => fluent.TextBox(
-    key: key,
-    controller: controller,
-    placeholder: label,
-    maxLines: maxLines,
-    onChanged: onChanged,
-  ),
+}) => AdaptiveField(
+  key: key,
+  label: label,
+  controller: controller,
+  onChanged: onChanged,
+  maxLines: maxLines,
 );
 
 Widget _button(String label, VoidCallback onPressed, {bool selected = false}) =>
-    Adaptively(
-      ios: (_) => CupertinoButton(onPressed: onPressed, child: Text(label)),
-      android: (_) => selected
-          ? material.FilledButton(onPressed: onPressed, child: Text(label))
-          : material.TextButton(onPressed: onPressed, child: Text(label)),
-      windows: (_) => selected
-          ? fluent.FilledButton(onPressed: onPressed, child: Text(label))
-          : fluent.Button(onPressed: onPressed, child: Text(label)),
-    );
+    AdaptiveButton(label: label, onPressed: onPressed, selected: selected);
 
 class RecipeEditorScreen extends StatefulWidget {
   const RecipeEditorScreen({
@@ -517,62 +460,68 @@ class _RecipeEditorScreenState extends State<RecipeEditorScreen> {
   @override
   Widget build(BuildContext context) {
     final photo = widget.repository.photoFileFor(photoPath);
-    return ListView(
-      padding: const EdgeInsets.all(16),
-      children: [
-        if (error != null) Text(error!),
-        if (photo != null && photo.existsSync())
-          Image.file(photo, height: 120, fit: BoxFit.contain),
-        Wrap(
-          spacing: 8,
-          children: [
-            _button('Choose photo', pickPhoto),
-            if (photoPath != null)
-              _button('Remove photo', () => setState(() => photoPath = null)),
-          ],
-        ),
-        _field('Title', title, (_) {}, key: const Key('recipe-title')),
-        _field(
-          'Base servings',
-          servings,
-          (_) {},
-          key: const Key('recipe-servings'),
-        ),
-        _field('Tags (comma separated)', tags, (_) {}),
-        const SizedBox(height: 12),
-        const Text('Ingredients'),
-        for (final line in lines)
-          Padding(
-            padding: const EdgeInsets.symmetric(vertical: 5),
-            child: Wrap(
-              spacing: 6,
-              runSpacing: 6,
-              children: [
-                SizedBox(
-                  width: 90,
-                  child: _field('Amount', line.quantity, (_) {}),
-                ),
-                SizedBox(width: 90, child: _field('Unit', line.unit, (_) {})),
-                SizedBox(width: 180, child: _field('Item', line.item, (_) {})),
-                SizedBox(
-                  width: 110,
-                  child: _field('Aisle', line.aisle, (_) {}),
-                ),
-                _button(
-                  'Remove line',
-                  () => setState(() {
-                    lines.remove(line);
-                    line.dispose();
-                  }),
-                ),
-              ],
-            ),
+    return AdaptiveSaveRegion(
+      onSave: save,
+      child: ListView(
+        padding: const EdgeInsets.all(16),
+        children: [
+          if (error != null) Text(error!),
+          if (photo != null && photo.existsSync())
+            Image.file(photo, height: 120, fit: BoxFit.contain),
+          Wrap(
+            spacing: 8,
+            children: [
+              _button('Choose photo', pickPhoto),
+              if (photoPath != null)
+                _button('Remove photo', () => setState(() => photoPath = null)),
+            ],
           ),
-        _button('Add ingredient', () => setState(() => lines.add(_Line()))),
-        _field('Steps', steps, (_) {}, maxLines: 5),
-        const SizedBox(height: 20),
-        _button(saving ? 'Saving…' : 'Save recipe', save),
-      ],
+          _field('Title', title, (_) {}, key: const Key('recipe-title')),
+          _field(
+            'Base servings',
+            servings,
+            (_) {},
+            key: const Key('recipe-servings'),
+          ),
+          _field('Tags (comma separated)', tags, (_) {}),
+          const SizedBox(height: 12),
+          const Text('Ingredients'),
+          for (final line in lines)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 5),
+              child: Wrap(
+                spacing: 6,
+                runSpacing: 6,
+                children: [
+                  SizedBox(
+                    width: 90,
+                    child: _field('Amount', line.quantity, (_) {}),
+                  ),
+                  SizedBox(width: 90, child: _field('Unit', line.unit, (_) {})),
+                  SizedBox(
+                    width: 180,
+                    child: _field('Item', line.item, (_) {}),
+                  ),
+                  SizedBox(
+                    width: 110,
+                    child: _field('Aisle', line.aisle, (_) {}),
+                  ),
+                  _button(
+                    'Remove line',
+                    () => setState(() {
+                      lines.remove(line);
+                      line.dispose();
+                    }),
+                  ),
+                ],
+              ),
+            ),
+          _button('Add ingredient', () => setState(() => lines.add(_Line()))),
+          _field('Steps', steps, (_) {}, maxLines: 5),
+          const SizedBox(height: 20),
+          _button(saving ? 'Saving…' : 'Save recipe', save),
+        ],
+      ),
     );
   }
 }

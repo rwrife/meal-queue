@@ -64,75 +64,17 @@ class _MealQueueAppState extends State<MealQueueApp> {
                   : 'Cannot open local recipes: $_error',
             ),
           )
-        : Column(
-            children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Adaptively(
-                    ios: (_) => cupertino.CupertinoButton(
-                      key: const Key('nav-recipes'),
-                      onPressed: () => setState(() => _tab = 0),
-                      child: const Text('Recipes'),
-                    ),
-                    android: (_) => material.TextButton(
-                      key: const Key('nav-recipes'),
-                      onPressed: () => setState(() => _tab = 0),
-                      child: const Text('Recipes'),
-                    ),
-                    windows: (_) => fluent.Button(
-                      key: const Key('nav-recipes'),
-                      onPressed: () => setState(() => _tab = 0),
-                      child: const Text('Recipes'),
-                    ),
-                  ),
-                  Adaptively(
-                    ios: (_) => cupertino.CupertinoButton(
-                      key: const Key('nav-planner'),
-                      onPressed: () => setState(() => _tab = 1),
-                      child: const Text('Planner'),
-                    ),
-                    android: (_) => material.TextButton(
-                      key: const Key('nav-planner'),
-                      onPressed: () => setState(() => _tab = 1),
-                      child: const Text('Planner'),
-                    ),
-                    windows: (_) => fluent.Button(
-                      key: const Key('nav-planner'),
-                      onPressed: () => setState(() => _tab = 1),
-                      child: const Text('Planner'),
-                    ),
-                  ),
-                  Adaptively(
-                    ios: (_) => cupertino.CupertinoButton(
-                      key: const Key('nav-shopping'),
-                      onPressed: () => setState(() => _tab = 2),
-                      child: const Text('Shopping'),
-                    ),
-                    android: (_) => material.TextButton(
-                      key: const Key('nav-shopping'),
-                      onPressed: () => setState(() => _tab = 2),
-                      child: const Text('Shopping'),
-                    ),
-                    windows: (_) => fluent.Button(
-                      key: const Key('nav-shopping'),
-                      onPressed: () => setState(() => _tab = 2),
-                      child: const Text('Shopping'),
-                    ),
-                  ),
-                ],
+        : AdaptiveNavigation(
+            index: _tab,
+            onChanged: (value) => setState(() => _tab = value),
+            child: switch (_tab) {
+              1 => WeekPlannerScreen(
+                recipes: repository,
+                planner: WeekPlanner(repository),
               ),
-              Expanded(
-                child: switch (_tab) {
-                  1 => WeekPlannerScreen(
-                    recipes: repository,
-                    planner: WeekPlanner(repository),
-                  ),
-                  2 => ShoppingScreen(recipes: repository),
-                  _ => RecipeLibraryScreen(repository: repository),
-                },
-              ),
-            ],
+              2 => ShoppingScreen(recipes: repository),
+              _ => RecipeLibraryScreen(repository: repository),
+            },
           );
     return Adaptively(
       ios: (_) => cupertino.CupertinoApp(
@@ -143,10 +85,23 @@ class _MealQueueAppState extends State<MealQueueApp> {
       android: (_) => material.MaterialApp(
         title: 'Meal Queue',
         debugShowCheckedModeBanner: false,
-        theme: material.ThemeData(colorSchemeSeed: material.Colors.deepOrange),
+        theme: material.ThemeData(
+          useMaterial3: true,
+          colorSchemeSeed: material.Colors.deepOrange,
+        ),
+        highContrastTheme: material.ThemeData(
+          useMaterial3: true,
+          colorScheme: const material.ColorScheme.highContrastLight(),
+        ),
+        highContrastDarkTheme: material.ThemeData(
+          useMaterial3: true,
+          colorScheme: const material.ColorScheme.highContrastDark(),
+        ),
         home: home,
       ),
       windows: (_) => fluent.FluentApp(
+        darkTheme: fluent.FluentThemeData(brightness: Brightness.dark),
+        builder: fluentContrastBuilder,
         title: 'Meal Queue',
         debugShowCheckedModeBanner: false,
         home: home,

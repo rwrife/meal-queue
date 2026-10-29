@@ -1,19 +1,12 @@
-import 'package:fluent_ui/fluent_ui.dart' as fluent;
-import 'package:flutter/cupertino.dart';
-import 'package:flutter/material.dart' as material;
+import 'package:flutter/widgets.dart';
 
 import '../app/adaptive.dart';
 import '../domain/meal.dart';
 import '../domain/recipe_repository.dart';
 import '../domain/week_planner.dart';
 
-Widget _button(String label, VoidCallback action, {Key? key}) => Adaptively(
-  ios: (_) => CupertinoButton(key: key, onPressed: action, child: Text(label)),
-  android: (_) =>
-      material.TextButton(key: key, onPressed: action, child: Text(label)),
-  windows: (_) =>
-      fluent.Button(key: key, onPressed: action, child: Text(label)),
-);
+Widget _button(String label, VoidCallback action, {Key? key}) =>
+    AdaptiveButton(key: key, label: label, onPressed: action);
 
 class WeekPlannerScreen extends StatefulWidget {
   const WeekPlannerScreen({
@@ -156,20 +149,7 @@ class _WeekPlannerScreenState extends State<WeekPlannerScreen> {
         ),
       ],
     );
-    return Adaptively(
-      ios: (_) => CupertinoPageScaffold(
-        navigationBar: CupertinoNavigationBar(middle: Text(title)),
-        child: SafeArea(child: body),
-      ),
-      android: (_) => material.Scaffold(
-        appBar: material.AppBar(title: Text(title)),
-        body: body,
-      ),
-      windows: (_) => fluent.ScaffoldPage(
-        header: fluent.PageHeader(title: Text(title)),
-        content: body,
-      ),
-    );
+    return AdaptiveScaffold(title: title, body: body, largeTitle: true);
   }
 
   Widget _archive() => FutureBuilder<List<DateTime>>(
@@ -225,8 +205,8 @@ class _WeekPlannerScreenState extends State<WeekPlannerScreen> {
     final count = meal?.kind == MealKind.recipe
         ? meal?.servings ?? recipe?.servings
         : null;
-    return Row(
-      mainAxisSize: MainAxisSize.min,
+    return Wrap(
+      crossAxisAlignment: WrapCrossAlignment.center,
       children: [
         _button(
           '$slot: $name${count == null ? '' : ' ($count servings)'}',
@@ -322,26 +302,11 @@ class _SlotDialogState extends State<_SlotDialog> {
               () => setState(() => recipeId = recipe.id),
               key: Key('recipe-${recipe.id}'),
             ),
-          Adaptively(
-            ios: (_) => CupertinoTextField(
-              key: const Key('slot-servings'),
-              controller: servings,
-              placeholder: 'Servings override',
-              keyboardType: TextInputType.number,
-            ),
-            android: (_) => material.TextField(
-              key: const Key('slot-servings'),
-              controller: servings,
-              keyboardType: TextInputType.number,
-              decoration: const material.InputDecoration(
-                labelText: 'Servings override',
-              ),
-            ),
-            windows: (_) => fluent.TextBox(
-              key: const Key('slot-servings'),
-              controller: servings,
-              placeholder: 'Servings override',
-            ),
+          AdaptiveField(
+            key: const Key('slot-servings'),
+            label: 'Servings override',
+            controller: servings,
+            keyboardType: TextInputType.number,
           ),
         ],
       ],
@@ -356,22 +321,10 @@ class _SlotDialogState extends State<_SlotDialog> {
       _button('Cancel', () => Navigator.pop(context)),
       _button('Save', save, key: const Key('save-slot')),
     ];
-    return Adaptively(
-      ios: (_) => CupertinoAlertDialog(
-        title: Text(widget.slot),
-        content: choices,
-        actions: actions,
-      ),
-      android: (_) => material.AlertDialog(
-        title: Text(widget.slot),
-        content: SingleChildScrollView(child: choices),
-        actions: actions,
-      ),
-      windows: (_) => fluent.ContentDialog(
-        title: Text(widget.slot),
-        content: SingleChildScrollView(child: choices),
-        actions: actions,
-      ),
+    return AdaptiveDialog(
+      title: widget.slot,
+      content: choices,
+      actions: actions,
     );
   }
 }

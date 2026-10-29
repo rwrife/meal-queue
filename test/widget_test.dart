@@ -59,12 +59,13 @@ void main() {
       await tester.pump();
     }
     expect(target, findsWidgets);
+    await tester.pumpAndSettle();
   }
 
   testWidgets('iOS gets Cupertino, no Material Scaffold', (tester) async {
     await pumpFor(tester, TargetPlatform.iOS);
     expect(find.byType(CupertinoApp), findsOneWidget);
-    expect(find.byType(CupertinoNavigationBar), findsOneWidget);
+    expect(find.byType(CupertinoSliverNavigationBar), findsOneWidget);
     expect(find.byType(material.MaterialApp), findsNothing);
     expect(find.byType(material.Scaffold), findsNothing);
     expect(find.byType(CupertinoTextField), findsOneWidget);
@@ -112,7 +113,10 @@ void main() {
       await tester.tap(find.text('Add stock').last);
       await settle(tester, find.byKey(const Key('stock-item')));
       expect(find.byKey(const Key('stock-date')), findsOneWidget);
-      expect(find.byType(material.AlertDialog), findsNothing);
+      expect(
+        find.byType(material.AlertDialog),
+        platform == TargetPlatform.android ? findsOneWidget : findsNothing,
+      );
       if (platform == TargetPlatform.windows) {
         expect(find.byType(fluent.ContentDialog), findsOneWidget);
         await tester.pump(const Duration(milliseconds: 300));
@@ -173,7 +177,7 @@ void main() {
         ),
       );
       await pumpFor(tester, TargetPlatform.android);
-      await tester.tap(find.textContaining('Bean soup'));
+      await tester.tap(find.textContaining('Bean soup').last);
       await settle(tester, find.byKey(const Key('recipe-detail')));
       expect(find.textContaining('You may already have this'), findsNothing);
       await tester.runAsync(
@@ -187,13 +191,13 @@ void main() {
         ),
       );
       await tester.tap(find.byType(material.BackButton));
-      await settle(tester, find.textContaining('Bean soup'));
+      await settle(tester, find.textContaining('Bean soup').last);
       // Re-enter after stock reload (stock changed outside UI in this test).
       await tester.runAsync(
         () => Future<void>.delayed(const Duration(milliseconds: 100)),
       );
       await tester.pump();
-      await tester.tap(find.textContaining('Bean soup'));
+      await tester.tap(find.textContaining('Bean soup').last);
       await settle(tester, find.textContaining('You may already have this'));
       expect(find.textContaining('You may already have this'), findsOneWidget);
       debugDefaultTargetPlatformOverride = null;
