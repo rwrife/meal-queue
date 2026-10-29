@@ -1,7 +1,4 @@
-import 'package:fluent_ui/fluent_ui.dart' as fluent;
-import 'package:flutter/cupertino.dart';
-import 'package:flutter/foundation.dart';
-import 'package:flutter/material.dart' as material;
+import 'package:flutter/widgets.dart';
 
 import '../app/adaptive.dart';
 import '../domain/meal.dart';
@@ -57,50 +54,9 @@ class _StockScreenState extends State<StockScreen> {
   }
 
   Future<void> remove(StockLot lot) async {
-    final confirmed = await _dialog<bool>(
+    final confirmed = await confirmAdaptiveDelete(
       context,
-      (ctx) => Adaptively(
-        ios: (_) => CupertinoAlertDialog(
-          title: Text('Delete ${lot.item}?'),
-          actions: [
-            CupertinoDialogAction(
-              child: const Text('Cancel'),
-              onPressed: () => Navigator.pop(ctx, false),
-            ),
-            CupertinoDialogAction(
-              isDestructiveAction: true,
-              child: const Text('Delete'),
-              onPressed: () => Navigator.pop(ctx, true),
-            ),
-          ],
-        ),
-        android: (_) => material.AlertDialog(
-          title: Text('Delete ${lot.item}?'),
-          actions: [
-            material.TextButton(
-              onPressed: () => Navigator.pop(ctx, false),
-              child: const Text('Cancel'),
-            ),
-            material.TextButton(
-              onPressed: () => Navigator.pop(ctx, true),
-              child: const Text('Delete'),
-            ),
-          ],
-        ),
-        windows: (_) => fluent.ContentDialog(
-          title: Text('Delete ${lot.item}?'),
-          actions: [
-            fluent.Button(
-              child: const Text('Cancel'),
-              onPressed: () => Navigator.pop(ctx, false),
-            ),
-            fluent.Button(
-              child: const Text('Delete'),
-              onPressed: () => Navigator.pop(ctx, true),
-            ),
-          ],
-        ),
-      ),
+      'Delete ${lot.item}?',
     );
     if (confirmed != true) return;
     try {
@@ -140,84 +96,33 @@ class _StockScreenState extends State<StockScreen> {
 
     final ok = await _dialog<bool>(
       context,
-      (ctx) => Adaptively(
-        ios: (_) => CupertinoAlertDialog(
-          title: Text('$action ${lot.item} (${lot.unit})'),
-          content: Column(
-            children: [
-              CupertinoTextField(
-                key: const Key('consume-amount'),
-                controller: controller,
-                placeholder: 'Amount',
-                onChanged: parse,
-              ),
-            ],
-          ),
-          actions: [
-            CupertinoDialogAction(
-              child: const Text('Cancel'),
-              onPressed: () => Navigator.pop(ctx, false),
-            ),
-            CupertinoDialogAction(
-              isDestructiveAction: true,
-              child: Text(action),
-              onPressed: () => Navigator.pop(ctx, true),
-            ),
-          ],
+      (ctx) => AdaptiveDialog(
+        title: '$action ${lot.item} (${lot.unit})',
+        controllers: [controller],
+        content: AdaptiveField(
+          key: const Key('consume-amount'),
+          label: 'Amount',
+          controller: controller,
+          onChanged: parse,
         ),
-        android: (_) => material.AlertDialog(
-          title: Text('$action ${lot.item} (${lot.unit})'),
-          content: material.TextField(
-            key: const Key('consume-amount'),
-            controller: controller,
-            decoration: const material.InputDecoration(labelText: 'Amount'),
-            onChanged: parse,
+        actions: [
+          AdaptiveButton(
+            label: 'Cancel',
+            onPressed: () => Navigator.pop(ctx, false),
           ),
-          actions: [
-            material.TextButton(
-              onPressed: () => Navigator.pop(ctx, false),
-              child: const Text('Cancel'),
-            ),
-            material.TextButton(
-              onPressed: () => Navigator.pop(ctx, true),
-              child: Text(action),
-            ),
-          ],
-        ),
-        windows: (_) => fluent.ContentDialog(
-          title: Text('$action ${lot.item} (${lot.unit})'),
-          content: fluent.TextBox(
-            key: const Key('consume-amount'),
-            controller: controller,
-            placeholder: 'Amount',
-            onChanged: parse,
+          AdaptiveButton(
+            label: action,
+            onPressed: () => Navigator.pop(ctx, true),
           ),
-          actions: [
-            fluent.Button(
-              child: const Text('Cancel'),
-              onPressed: () => Navigator.pop(ctx, false),
-            ),
-            fluent.FilledButton(
-              child: Text(action),
-              onPressed: () => Navigator.pop(ctx, true),
-            ),
-          ],
-        ),
+        ],
       ),
     );
+
     return ok == true ? submitted : null;
   }
 
-  static Future<T?> _dialog<T>(BuildContext context, WidgetBuilder builder) {
-    switch (defaultTargetPlatform) {
-      case TargetPlatform.iOS || TargetPlatform.macOS:
-        return showCupertinoDialog<T>(context: context, builder: builder);
-      case TargetPlatform.android || TargetPlatform.fuchsia:
-        return material.showDialog<T>(context: context, builder: builder);
-      case TargetPlatform.windows || TargetPlatform.linux:
-        return fluent.showDialog<T>(context: context, builder: builder);
-    }
-  }
+  static Future<T?> _dialog<T>(BuildContext context, WidgetBuilder builder) =>
+      showAdaptiveDialog<T>(context: context, builder: builder);
 
   String _label(StockLot lot) {
     final parts = [
@@ -282,73 +187,17 @@ class _StockScreenState extends State<StockScreen> {
         Expanded(child: content),
       ],
     );
-    return Adaptively(
-      ios: (_) => CupertinoPageScaffold(
-        navigationBar: CupertinoNavigationBar(
-          middle: const Text('Stock'),
-          leading: widget.onBack == null
-              ? null
-              : CupertinoButton(
-                  padding: EdgeInsets.zero,
-                  onPressed: widget.onBack,
-                  child: const Text('Back'),
-                ),
-          trailing: CupertinoButton(
-            padding: EdgeInsets.zero,
-            onPressed: () => edit(),
-            child: const Icon(CupertinoIcons.add),
-          ),
-        ),
-        child: SafeArea(child: body),
-      ),
-      android: (_) => material.Scaffold(
-        appBar: material.AppBar(
-          title: const Text('Stock'),
-          leading: widget.onBack == null
-              ? null
-              : material.BackButton(onPressed: widget.onBack),
-          actions: [
-            material.IconButton(
-              tooltip: 'Add stock',
-              onPressed: () => edit(),
-              icon: const Icon(material.Icons.add),
-            ),
-          ],
-        ),
-        body: body,
-      ),
-      windows: (_) => fluent.NavigationView(
-        content: fluent.ScaffoldPage(
-          header: fluent.PageHeader(
-            title: const Text('Stock'),
-            commandBar: fluent.CommandBar(
-              primaryItems: [
-                if (widget.onBack != null)
-                  fluent.CommandBarButton(
-                    icon: const Icon(fluent.FluentIcons.back),
-                    label: const Text('Back'),
-                    onPressed: widget.onBack,
-                  ),
-                fluent.CommandBarButton(
-                  icon: const Icon(fluent.FluentIcons.add),
-                  label: const Text('Add stock'),
-                  onPressed: () => edit(),
-                ),
-              ],
-            ),
-          ),
-          content: body,
-        ),
-      ),
+    return AdaptiveScaffold(
+      title: 'Stock',
+      body: body,
+      onBack: widget.onBack,
+      actionLabel: 'Add stock',
+      onAction: () => edit(),
     );
   }
 
-  Widget _button(String label, VoidCallback onPressed) => Adaptively(
-    ios: (_) => CupertinoButton(onPressed: onPressed, child: Text(label)),
-    android: (_) =>
-        material.TextButton(onPressed: onPressed, child: Text(label)),
-    windows: (_) => fluent.Button(onPressed: onPressed, child: Text(label)),
-  );
+  Widget _button(String label, VoidCallback onPressed) =>
+      AdaptiveButton(label: label, onPressed: onPressed);
 }
 
 class _StockEditorSheet extends StatefulWidget {
@@ -419,48 +268,24 @@ class _StockEditorSheetState extends State<_StockEditorSheet> {
         date,
         const Key('stock-date'),
       ),
-      Adaptively(
-        ios: (_) => CupertinoSegmentedControl<StockLocation>(
-          children: {for (final l in StockLocation.values) l: Text(l.name)},
-          groupValue: location,
-          onValueChanged: _pickLocation,
-        ),
-        android: (_) => material.SegmentedButton<StockLocation>(
-          segments: [
-            for (final l in StockLocation.values)
-              material.ButtonSegment(value: l, label: Text(l.name)),
-          ],
-          selected: {location},
-          onSelectionChanged: (values) => _pickLocation(values.first),
-        ),
-        windows: (_) => Wrap(
-          spacing: 8,
-          children: [
-            for (final l in StockLocation.values)
-              fluent.ToggleButton(
-                checked: location == l,
-                onChanged: (_) => _pickLocation(l),
-                child: Text(l.name),
-              ),
-          ],
-        ),
+      Wrap(
+        spacing: 8,
+        children: [
+          for (final l in StockLocation.values)
+            AdaptiveButton(
+              label: l.name,
+              selected: location == l,
+              onPressed: () => _pickLocation(l),
+            ),
+        ],
       ),
       _button('Save', save),
       _button('Cancel', () => Navigator.pop(context, false)),
     ];
-    return Adaptively(
-      ios: (_) => CupertinoPageScaffold(
-        navigationBar: const CupertinoNavigationBar(middle: Text('Stock item')),
-        child: SafeArea(
-          child: ListView(padding: const EdgeInsets.all(16), children: fields),
-        ),
-      ),
-      android: (_) => material.Scaffold(
-        appBar: material.AppBar(title: const Text('Stock item')),
-        body: ListView(padding: const EdgeInsets.all(16), children: fields),
-      ),
-      windows: (_) => fluent.ContentDialog(
-        title: const Text('Stock item'),
+    return AdaptiveSaveRegion(
+      onSave: save,
+      child: AdaptiveDialog(
+        title: 'Stock item',
         content: Column(mainAxisSize: MainAxisSize.min, children: fields),
         actions: const [],
       ),
@@ -468,32 +293,8 @@ class _StockEditorSheetState extends State<_StockEditorSheet> {
   }
 
   Widget _field(String label, TextEditingController controller, Key key) =>
-      Padding(
-        padding: const EdgeInsets.symmetric(vertical: 6),
-        child: Adaptively(
-          ios: (_) => CupertinoTextField(
-            key: key,
-            controller: controller,
-            placeholder: label,
-          ),
-          android: (_) => material.TextField(
-            key: key,
-            controller: controller,
-            decoration: material.InputDecoration(labelText: label),
-          ),
-          windows: (_) => fluent.TextBox(
-            key: key,
-            controller: controller,
-            placeholder: label,
-          ),
-        ),
-      );
+      AdaptiveField(key: key, label: label, controller: controller);
 
-  Widget _button(String label, VoidCallback onPressed) => Adaptively(
-    ios: (_) => CupertinoButton(onPressed: onPressed, child: Text(label)),
-    android: (_) =>
-        material.FilledButton(onPressed: onPressed, child: Text(label)),
-    windows: (_) =>
-        fluent.FilledButton(onPressed: onPressed, child: Text(label)),
-  );
+  Widget _button(String label, VoidCallback onPressed) =>
+      AdaptiveButton(label: label, onPressed: onPressed);
 }

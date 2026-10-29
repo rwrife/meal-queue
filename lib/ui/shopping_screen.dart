@@ -1,6 +1,4 @@
-import 'package:fluent_ui/fluent_ui.dart' as fluent;
-import 'package:flutter/cupertino.dart';
-import 'package:flutter/material.dart' as material;
+import 'package:flutter/widgets.dart';
 
 import '../app/adaptive.dart';
 import '../domain/rational.dart';
@@ -53,14 +51,8 @@ class _ShoppingScreenState extends State<ShoppingScreen> {
     }
   }
 
-  Widget button(String label, VoidCallback action, {Key? key}) => Adaptively(
-    ios: (_) =>
-        CupertinoButton(key: key, onPressed: action, child: Text(label)),
-    android: (_) =>
-        material.TextButton(key: key, onPressed: action, child: Text(label)),
-    windows: (_) =>
-        fluent.Button(key: key, onPressed: action, child: Text(label)),
-  );
+  Widget button(String label, VoidCallback action, {Key? key}) =>
+      AdaptiveButton(key: key, label: label, onPressed: action);
 
   Future<void> edit([SavedLine? line]) async {
     final item = TextEditingController(text: line?.item ?? '');
@@ -69,14 +61,8 @@ class _ShoppingScreenState extends State<ShoppingScreen> {
     );
     final unit = TextEditingController(text: line?.unit.symbol ?? '');
     final aisle = TextEditingController(text: line?.aisle ?? '');
-    Widget field(TextEditingController controller, String name) => Adaptively(
-      ios: (_) => CupertinoTextField(controller: controller, placeholder: name),
-      android: (_) => material.TextField(
-        controller: controller,
-        decoration: material.InputDecoration(labelText: name),
-      ),
-      windows: (_) => fluent.TextBox(controller: controller, placeholder: name),
-    );
+    Widget field(TextEditingController controller, String name) =>
+        AdaptiveField(controller: controller, label: name);
     final confirmed = await showAdaptiveDialog<bool>(
       context: context,
       builder: (ctx) {
@@ -92,28 +78,17 @@ class _ShoppingScreenState extends State<ShoppingScreen> {
           ),
         );
         void done() => Navigator.pop(ctx, true);
-        return Adaptively(
-          ios: (_) => CupertinoAlertDialog(
-            title: const Text('Manual item'),
-            content: form,
-            actions: [
-              CupertinoDialogAction(onPressed: done, child: const Text('Save')),
-            ],
-          ),
-          android: (_) => material.AlertDialog(
-            title: const Text('Manual item'),
-            content: form,
-            actions: [
-              material.TextButton(onPressed: done, child: const Text('Save')),
-            ],
-          ),
-          windows: (_) => fluent.ContentDialog(
-            title: const Text('Manual item'),
-            content: form,
-            actions: [
-              fluent.FilledButton(onPressed: done, child: const Text('Save')),
-            ],
-          ),
+        return AdaptiveDialog(
+          title: 'Manual item',
+          controllers: [item, amount, unit, aisle],
+          content: form,
+          actions: [
+            AdaptiveButton(
+              label: 'Cancel',
+              onPressed: () => Navigator.pop(ctx, false),
+            ),
+            AdaptiveButton(label: 'Save', onPressed: done),
+          ],
         );
       },
     );
@@ -132,10 +107,6 @@ class _ShoppingScreenState extends State<ShoppingScreen> {
         );
       });
     }
-    item.dispose();
-    amount.dispose();
-    unit.dispose();
-    aisle.dispose();
   }
 
   @override
@@ -176,44 +147,23 @@ class _ShoppingScreenState extends State<ShoppingScreen> {
               context: context,
               builder: (ctx) {
                 void save() => Navigator.pop(ctx, true);
-                return Adaptively(
-                  ios: (_) => CupertinoAlertDialog(
-                    title: const Text('Aisles, comma separated'),
-                    content: CupertinoTextField(controller: input),
-                    actions: [
-                      CupertinoDialogAction(
-                        onPressed: save,
-                        child: const Text('Save'),
-                      ),
-                    ],
-                  ),
-                  android: (_) => material.AlertDialog(
-                    title: const Text('Aisles, comma separated'),
-                    content: material.TextField(controller: input),
-                    actions: [
-                      material.TextButton(
-                        onPressed: save,
-                        child: const Text('Save'),
-                      ),
-                    ],
-                  ),
-                  windows: (_) => fluent.ContentDialog(
-                    title: const Text('Aisles, comma separated'),
-                    content: fluent.TextBox(controller: input),
-                    actions: [
-                      fluent.FilledButton(
-                        onPressed: save,
-                        child: const Text('Save'),
-                      ),
-                    ],
-                  ),
+                return AdaptiveDialog(
+                  title: 'Aisles, comma separated',
+                  controllers: [input],
+                  content: AdaptiveField(label: 'Aisles', controller: input),
+                  actions: [
+                    AdaptiveButton(
+                      label: 'Cancel',
+                      onPressed: () => Navigator.pop(ctx, false),
+                    ),
+                    AdaptiveButton(label: 'Save', onPressed: save),
+                  ],
                 );
               },
             );
             if (ok == true) {
               await run(() => store.setAisleOrder(input.text.split(',')));
             }
-            input.dispose();
           }),
           for (final line in current.lines)
             Padding(
@@ -221,23 +171,11 @@ class _ShoppingScreenState extends State<ShoppingScreen> {
               child: Wrap(
                 crossAxisAlignment: WrapCrossAlignment.center,
                 children: [
-                  Adaptively(
-                    ios: (_) => CupertinoSwitch(
-                      value: line.checked,
-                      onChanged: (v) =>
-                          run(() => store.check(current.id, line.id, v)),
-                    ),
-                    android: (_) => material.Checkbox(
-                      value: line.checked,
-                      onChanged: (v) =>
-                          run(() => store.check(current.id, line.id, v!)),
-                    ),
-                    windows: (_) => fluent.Checkbox(
-                      checked: line.checked,
-                      onChanged: (v) => run(
-                        () => store.check(current.id, line.id, v ?? false),
-                      ),
-                    ),
+                  AdaptiveCheckbox(
+                    label: 'Check ${line.item}',
+                    value: line.checked,
+                    onChanged: (v) =>
+                        run(() => store.check(current.id, line.id, v)),
                   ),
                   Text(
                     '${line.quantity ?? ''} ${line.unit.symbol} ${line.item} (${line.aisle.isEmpty ? 'Other' : line.aisle})'
@@ -267,21 +205,6 @@ class _ShoppingScreenState extends State<ShoppingScreen> {
           ),
       ],
     );
-    return Adaptively(
-      ios: (_) => CupertinoPageScaffold(
-        navigationBar: const CupertinoNavigationBar(middle: Text('Shopping')),
-        child: SafeArea(child: content),
-      ),
-      android: (_) => material.Scaffold(
-        appBar: material.AppBar(title: const Text('Shopping')),
-        body: content,
-      ),
-      windows: (_) => fluent.NavigationView(
-        content: fluent.ScaffoldPage(
-          header: const fluent.PageHeader(title: Text('Shopping')),
-          content: content,
-        ),
-      ),
-    );
+    return AdaptiveScaffold(title: 'Shopping', body: content, largeTitle: true);
   }
 }
