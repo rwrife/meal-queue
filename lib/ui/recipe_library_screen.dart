@@ -253,25 +253,28 @@ class _RecipeLibraryScreenState extends State<RecipeLibraryScreen> {
   Widget _library() => Column(
     children: [
       Padding(
-        padding: const EdgeInsets.all(12),
-        child: _button('Stock', openStock),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+        child: Wrap(
+          spacing: 8,
+          runSpacing: 4,
+          children: [
+            _button('Stock', openStock),
+            _button('Backup', () {
+              Navigator.of(context)
+                  .push(
+                    adaptivePageRoute<void>(
+                      (_) => BackupScreen(repository: widget.repository),
+                    ),
+                  )
+                  .then((_) {
+                    if (mounted) reload();
+                  });
+            }),
+          ],
+        ),
       ),
       Padding(
-        padding: const EdgeInsets.all(12),
-        child: _button('Backup and restore (photos excluded)', () {
-          Navigator.of(context)
-              .push(
-                adaptivePageRoute<void>(
-                  (_) => BackupScreen(repository: widget.repository),
-                ),
-              )
-              .then((_) {
-                if (mounted) reload();
-              });
-        }),
-      ),
-      Padding(
-        padding: const EdgeInsets.all(12),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
         child: _field('Search recipes', null, (value) {
           query = value;
           reload();
