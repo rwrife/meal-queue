@@ -95,7 +95,6 @@ class _BackupScreenState extends State<BackupScreen> {
     );
     if (confirmed != true) return;
     await MealBackup(widget.repository.db).importJson(json);
-    await widget.repository.cleanOrphanPhotos();
     if (mounted) setState(() => message = 'Backup restored. Photos excluded.');
   });
 
