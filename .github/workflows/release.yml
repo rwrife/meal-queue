@@ -1,0 +1,62 @@
+name: Windows release
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Existing v* tag to publish (must point to this checkout)'
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  portable:
+    runs-on: windows-latest
+    timeout-minutes: 45
+    steps:
+      - name: Validate tag
+        shell: bash
+        env:
+          RELEASE_TAG: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name }}
+        run: |
+          set -euo pipefail
+          [[ "$RELEASE_TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]
+          echo "RELEASE_TAG=$RELEASE_TAG" >> "$GITHUB_ENV"
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref }}
+      - name: Verify tag checkout
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$(git rev-list -n 1 "$RELEASE_TAG")"
+          test "$(git tag -l "$RELEASE_TAG")" = "$RELEASE_TAG"
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: 3.47.7
+          channel: stable
+          cache: true
+      - run: flutter pub get --enforce-lockfile
+      - run: flutter test
+      - run: flutter build windows --release
+      - name: Zip portable Windows build
+        shell: pwsh
+        run: |
+          $source = 'build/windows/x64/runner/Release'
+          if (-not (Test-Path "$source/mealqueue.exe")) { throw 'Missing release executable' }
+          Compress-Archive -Path "$source/*" -DestinationPath 'mealqueue-windows-portable.zip' -Force
+          if ((Get-Item 'mealqueue-windows-portable.zip').Length -le 0) { throw 'Empty archive' }
+      - name: Publish release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          gh release view "$RELEASE_TAG" >/dev/null 2>&1 || gh release create "$RELEASE_TAG" --title "Meal Queue $RELEASE_TAG" --notes "Offline Windows portable release. JSON backup excludes photos."
+          gh release upload "$RELEASE_TAG" mealqueue-windows-portable.zip --clobber
+          gh release view "$RELEASE_TAG" --json assets --jq '.assets[] | select(.name == "mealqueue-windows-portable.zip") | [.url, .size] | @tsv'

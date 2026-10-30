@@ -11,6 +11,7 @@ import '../domain/recipe_repository.dart';
 import '../domain/unit.dart';
 import '../domain/week_planner.dart';
 import 'stock_screen.dart';
+import 'backup_screen.dart';
 
 class RecipeLibraryScreen extends StatefulWidget {
   const RecipeLibraryScreen({required this.repository, super.key});
@@ -254,6 +255,20 @@ class _RecipeLibraryScreenState extends State<RecipeLibraryScreen> {
       Padding(
         padding: const EdgeInsets.all(12),
         child: _button('Stock', openStock),
+      ),
+      Padding(
+        padding: const EdgeInsets.all(12),
+        child: _button('Backup and restore (photos excluded)', () {
+          Navigator.of(context)
+              .push(
+                adaptivePageRoute<void>(
+                  (_) => BackupScreen(repository: widget.repository),
+                ),
+              )
+              .then((_) {
+                if (mounted) reload();
+              });
+        }),
       ),
       Padding(
         padding: const EdgeInsets.all(12),

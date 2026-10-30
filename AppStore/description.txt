@@ -10,4 +10,4 @@ FEATURES
 - Use-first pantry & freezer nudges: log loose pantry and freezer stock so you can use what you already have before buying more.
 - Cook history: remember what was cooked when and how often, helping you rotate meals without thinking about it.
 - Responsive design: platform-authentic experience on your phone at the store, your tablet in the kitchen, or your Windows PC at your desk.
-- Privacy-first: all data stays local in SQLite storage on your device. Complete JSON backup and restore whenever you want. No ads, no tracking, and no network requests.
+- Privacy-first: data stays local in SQLite storage. Export or import a JSON backup of recipes, plans, shopping lists (including checked items), stock, and cook history. Photos are NOT included in JSON backups. No accounts, ads, tracking, or app network requests.
